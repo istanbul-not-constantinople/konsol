@@ -1,0 +1,20 @@
+{
+  "name": "project-name",
+  "version": "1.0.0",
+  "description": "does this count as boilerplate?",
+  "main": "out/index.js",
+  "scripts": {
+    "test": "jest --config jest.config.json",
+    "watch": "tsc -p build.tsconfig.json"
+  },
+  "keywords": [],
+  "author": "radiish",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/jest": "^26.0.24",
+    "jest": "^27.0.6",
+    "ts-jest": "^27.0.3",
+    "typescript": "^4.3.5"
+  }
+}
