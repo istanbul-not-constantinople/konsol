@@ -30,7 +30,7 @@ const ofFunction = (func: (...args: any[]) => any) => {
     .replace(/\1/gm, '/')
     .replace(/"(?:[^\\"]|\\")*"|'(?:[^\\']|\\')*'|`(?:[^\\`]|\\`)*`/gm, (m) => m.replace(/\)/gm, '\u0001'));
   regexified = regexified.slice(0, regexified.indexOf(')')).replace(/\1/gm, ')');
-  return styleFunction(func.name, format(parseJSONLike(regexified.slice(bracket + 1)), undefined, { hideUndefined: true, stringStyle: 'key', keyFormat: chalk.magentaBright.italic, keyPredicate: (key: string) => /^(?:...)?[a-zA-Z$_][a-zA-Z$_0-9]*$/gm.test(key) }).slice(1, -1), chalk.gray('...'));
+  return styleFunction(func.name, format(parseJSONLike(regexified.slice(bracket + 1)), undefined, { hideUndefined: true, stringStyle: 'key', keyFormat: (key: string) => key.startsWith('...') ? `${chalk.gray('...')}${chalk.magentaBright.italic(key.slice(3))}` : chalk.magentaBright.italic(key), keyPredicate: (key: string) => /^(?:...)?[a-zA-Z$_][a-zA-Z$_0-9]*$/gm.test(key) }).slice(1, -1), chalk.gray('...'));
 }
 
 const ofFunctionCall = <T extends (...args: U) => V, U extends any[], V>(func: T, args: U, run?: boolean, cachedResult?: V) => {
