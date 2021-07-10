@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import * as Konsol from './konsol';
 
 const escapeString = (node: string, quote: string): string => {
   return `${quote}${node.replace(new RegExp(quote, 'gm'), `\\${quote}`)}${quote}`;
@@ -79,14 +80,19 @@ const pseudoformat = (part: string) => typeof part === 'string' ? part : format(
 
 const substitute = (message?: any, ...optionalParams: any[]): string => typeof message === 'string' && optionalParams.length > 0 && message.includes('%s') ? substitute(message.replace('%s', pseudoformat(optionalParams[0])), ...optionalParams.slice(1)) : [...(message !== undefined ? [message] : []), ...optionalParams].map(pseudoformat).join('');
 
-
-interface Konsol {
-  (message?: any, ...optionalParams: any[]): string;
-}
-
 const timers = new Map<string, number>();
 
-const konsol: Konsol & Console = Object.assign(substitute, {
+type ConditionalProperty<T extends keyof any, U extends Record<keyof any, any>, V> = U[T] extends V ? T : V;
+
+//const logEvent = <T extends ConditionalProperty<keyof Konsol.Events, Konsol.Events, (formatted: string) => void>>(key: T, format?: (...parts: any[]) => string, log?: (message: string) => void) => (...parts: any[]) => {
+//  const formatted = (format ?? substitute)(...parts);
+//  (log ?? console.log)(formatted);
+//  konsol.hooks.emit(key, formatted);
+//};
+
+//const b: ConditionalProperty<keyof Konsol.Events, Konsol.Events, (formatted: string) => void> = null as any;
+
+const konsol: { hooks: Konsol.Emitter } & Console = Object.assign(substitute, { hooks: new Konsol.Emitter() }, {
   assert: (value: any, message?: string, ...optionalParams: any[]) => value === false ? konsol.log('Assertion failed: ', message, ...optionalParams) : void 0,
   memory: console.memory,
   clear: console.clear,
@@ -110,7 +116,7 @@ const konsol: Konsol & Console = Object.assign(substitute, {
     konsol.log(...parts);
   },
   info: (...parts: any[]) => konsol.log(...parts),
-  log: (...parts: any[]) => console.log(konsol(...parts)),
+  log: (...parts: any[]) => console.log(substitute(...parts)),
   profile: (...parts: any[]) => void 0,
   profileEnd: (...parts: any[]) => void 0,
   table: (...parts: any[]) => void 0,
