@@ -74,3 +74,63 @@ const format = (node: any, depth?: number): string => {
       return node;
   }
 };
+
+const pseudoformat = (part: string) => typeof part === 'string' ? part : format(part);
+
+const substitute = (message?: any, ...optionalParams: any[]): string => typeof message === 'string' && optionalParams.length > 0 && message.includes('%s') ? substitute(message.replace('%s', pseudoformat(optionalParams[0])), ...optionalParams.slice(1)) : [...(message !== undefined ? [message] : []), ...optionalParams].map(pseudoformat).join('');
+
+
+interface Konsol {
+  (message?: any, ...optionalParams: any[]): string;
+}
+
+const timers = new Map<string, number>();
+
+const konsol: Konsol & Console = Object.assign(substitute, {
+  assert: (value: any, message?: string, ...optionalParams: any[]) => value === false ? konsol.log('Assertion failed: ', message, ...optionalParams) : void 0,
+  memory: console.memory,
+  clear: console.clear,
+  count: console.count,
+  countReset: console.countReset,
+  debug: (...parts: any[]) => konsol.log(...parts),
+  dir: (...parts: any[]) => konsol.log(...parts.map(format)),
+  dirxml: (...parts: any[]) => konsol.log(...parts),
+  error: (...parts: any[]) => console.error(...parts),
+  exception: (...parts: any[]) => console.error(...parts),
+  group: (...parts: any[]) => {
+    console.group();
+    konsol.log(...parts);
+  },
+  groupCollapsed: (...parts: any[]) => {
+    console.groupCollapsed();
+    konsol.log(...parts);
+  },
+  groupEnd: (...parts: any[]) => {
+    console.groupEnd();
+    konsol.log(...parts);
+  },
+  info: (...parts: any[]) => konsol.log(...parts),
+  log: (...parts: any[]) => console.log(konsol(...parts)),
+  profile: (...parts: any[]) => void 0,
+  profileEnd: (...parts: any[]) => void 0,
+  table: (...parts: any[]) => void 0,
+  time: (label: string) => timers.set(label, new Date().getTime()),
+  timeEnd: (label: string) => {
+    konsol.timeLog();
+    timers.delete(label);
+  },
+  timeLog: (label: string) => {
+    const time = timers.get(label);
+    if (time !== undefined) {
+      konsol.log(label, ': ', (new Date().getTime() - time) / 1000);
+    }
+  },
+  timeStamp: console.timeStamp,
+  trace: console.trace,
+  warn: (message?: any, ...extra: any[]) => konsol.log(message, ...extra),
+  Console: console.Console,
+});
+
+konsol.log('i have %s carrots in my %s', 19, { mouth: true, nose: false, legs: false })
+
+export default konsol;
