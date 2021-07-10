@@ -1,7 +1,7 @@
 # **konsol**
 **very poggers `ts/js` console output replacement**
 ```
-npm i --save konsol
+npm i --save konsol-ts
 ```
 ↑↑↑ do this
 
