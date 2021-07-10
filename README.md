@@ -1,5 +1,5 @@
 # **konsol**
-**very poggers `ts/js` console output**
+**very poggers `ts/js` console output replacement**
 ```
 npm i --save konsol
 ```
