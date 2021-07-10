@@ -130,9 +130,9 @@ type ConditionalProperty<T extends keyof any, U extends Record<keyof any, any>, 
 //};
 
 //const b: ConditionalProperty<keyof Konsol.Events, Konsol.Events, (formatted: string) => void> = null as any;
-
 interface Konsol {
   formatFunctionCall: <T extends (...args: U) => V, U extends any[], V>(func: T, args: U, run?: boolean, cachedResult?: V) => string;
+  (message?: any, ...optionalParams: any[]): string;
 }
 
 const konsol: Konsol & { hooks: Konsol.Emitter } & Console = Object.assign(substitute, { hooks: new Konsol.Emitter() }, {

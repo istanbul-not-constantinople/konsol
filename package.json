@@ -7,7 +7,7 @@
   "scripts": {
     "test": "jest --config jest.config.json",
     "watch": "tsc -p build.tsconfig.json -w",
-    "prepublish": "tsc -p build.tsconfig.json"
+    "build": "tsc -p build.tsconfig.json"
   },
   "keywords": [],
   "author": "radiish",
