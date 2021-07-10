@@ -131,7 +131,12 @@ type ConditionalProperty<T extends keyof any, U extends Record<keyof any, any>, 
 
 //const b: ConditionalProperty<keyof Konsol.Events, Konsol.Events, (formatted: string) => void> = null as any;
 
-const konsol: { hooks: Konsol.Emitter } & Console = Object.assign(substitute, { hooks: new Konsol.Emitter() }, {
+interface Konsol {
+  formatFunctionCall: <T extends (...args: U) => V, U extends any[], V>(func: T, args: U, run?: boolean, cachedResult?: V) => string;
+}
+
+const konsol: Konsol & { hooks: Konsol.Emitter } & Console = Object.assign(substitute, { hooks: new Konsol.Emitter() }, {
+  formatFunctionCall: ofFunctionCall,
   assert: (value: any, message?: string, ...optionalParams: any[]) => value === false ? konsol.log('Assertion failed: ', message, ...optionalParams) : void 0,
   memory: console.memory,
   clear: console.clear,
@@ -214,7 +219,7 @@ const parseJSONLike = (jsonLike: string) => {
 
       if (heap[0].length > 0) {
         if (char === ':') {
-          const match = rest.match(/^(?:...)[a-zA-Z$_][a-zA-Z0-9$_]*/m);
+          const match = rest.match(/^(?:\.\.\.)[a-zA-Z$_][a-zA-Z0-9$_]*/m);
           if (match !== null) {
             heap.push(match[0]);
             i += match[0].length;
@@ -232,7 +237,7 @@ const parseJSONLike = (jsonLike: string) => {
         heap.push(old + quoteMatch[0]);
         i += quoteMatch[0].length - 1;
       } else {
-        const idMatch = (char + rest).match(/^(?:...)?[a-zA-Z$_][a-zA-Z0-9$_]*/m);
+        const idMatch = (char + rest).match(/^(?:\.\.\.)?[a-zA-Z$_][a-zA-Z0-9$_]*/m);
         if (idMatch !== null) {
           const old = heap.pop();
           heap.push(old + idMatch[0]);
@@ -244,6 +249,9 @@ const parseJSONLike = (jsonLike: string) => {
     // konsol.log('   >> ptrs: ', pointers);
     // konsol.log('   >> rslt: ', result);
   }
+
+  konsol.log(result);
+
   return result;
 };
 
@@ -251,5 +259,9 @@ const sum = (...nums: number[]) => nums.reduce((i, num) => i + num);
 const sum2 = eval('(...nums) => nums.reduce((i, num) => i + num)');
 //const sum3 = eval('(...nums) => { return nums.reduce((i, num) => i + num); }');
 
+//const ab = ;
+
 konsol.log(ofFunction(sum));
-konsol.log(ofFunctionCall(sum, [0, 1, 55, 208]));
+konsol.log((a: number, b: number) => a - b);
+konsol.log(konsol.formatFunctionCall(sum, [0, 1, 55, 208]));
+konsol.log(konsol.formatFunctionCall((a: number, b: number) => a - b, [0, 1]));
