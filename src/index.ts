@@ -17,24 +17,30 @@ const unescapeString = (node: string) => {
   return node;
 };
 
-const styleFunction = (name: string, args: string) => `${chalk.cyan(name || chalk.italic('function'))}(${args}) ${chalk.gray('=> ...')}`;
+const styleFunction = (name: string, args: string, result: string) => `${chalk.cyan(name || chalk.gray('[anonymous] '))}(${args}) ${chalk.gray('=>')} ${result}`;
 
-const ofFunction = (input: (...args: any[]) => any) => {
-  const content = input.toString().trim().replace(/((?:function)?)\s+([a-zA-Z$_][a-zA-Z0-9$_]*)\s*/gm, '$1 $2');
+const ofFunction = (func: (...args: any[]) => any) => {
+  const rawContent = func.toString().trim();
+  const content = (rawContent.startsWith('function') ? rawContent.slice(8).trim() : rawContent.replace(/^([a-zA-Z$_][a-zA-Z0-9$_]*)\s*/m, `($1) `));
   const bracket = content.indexOf('(');
-  const regexified = content
+  let regexified = content
     .replace(/\1/gm, '')
     .replace(/"(?:[^\\"]|\\")*"|'(?:[^\\']|\\')*'|`(?:[^\\`]|\\`)*`/gm, (m) => m.replace(/\//gm, '\u0001'))
     .replace(/(\/\*[^*]+\*\/)|(\/\/[^\n]*)/gm, '')
     .replace(/\1/gm, '/')
-    .replace(/"(?:[^\\"]|\\")*"|'(?:[^\\']|\\')*'|`(?:[^\\`]|\\`)*`/gm, (m) => m.replace(/\)/gm, '\u0001'))
-    .replace(/\).*/gm, '')
-    .replace(/\1/gm, '=>');
-  return styleFunction((content.startsWith('function') ? content.slice(9, bracket) : '') || input.name, format(parseJSONLike(regexified.slice(bracket + 1, -1)), undefined, { hideUndefined: true, stringStyle: 'key', keyFormat: chalk.magentaBright.italic }).slice(1, -1));
+    .replace(/"(?:[^\\"]|\\")*"|'(?:[^\\']|\\')*'|`(?:[^\\`]|\\`)*`/gm, (m) => m.replace(/\)/gm, '\u0001'));
+  regexified = regexified.slice(0, regexified.indexOf(')')).replace(/\1/gm, ')');
+  console.log(regexified.slice(bracket + 1));
+  return styleFunction(func.name, format(parseJSONLike(regexified.slice(bracket + 1)), undefined, { hideUndefined: true, stringStyle: 'key', keyFormat: chalk.magentaBright.italic, keyPredicate: (key: string) => /^(?:...)?[a-zA-Z$_][a-zA-Z$_0-9]*$/gm.test(key) }).slice(1, -1), chalk.gray('...'));
 }
 
-const ofKey = (key: string, bonus?: (key: string) => string): string => /^[a-zA-Z$_][a-zA-Z$_0-9]*$/gm.test(key) ? bonus !== undefined ? bonus(key) : key : ofString(key);
+const ofFunctionCall = <T extends (...args: U) => V, U extends any[], V>(func: T, args: U, run?: boolean, cachedResult?: V) => {
+  const content = func.toString().trim().replace(/((?:function)?)\s+([a-zA-Z$_][a-zA-Z0-9$_]*)\s*/gm, '$1 $2');
+  const bracket = content.indexOf('(');
+  return styleFunction((content.startsWith('function') ? content.slice(9, bracket) : '') || func.name, format(args).slice(1, -1), (run ?? true) ? format(cachedResult ?? func(...args)) : chalk.gray('...'));
+};
 
+const ofKey = (key: string, bonus?: (key: string) => string, isKey?: (key: string) => boolean): string => (isKey ?? ((key: string) => /^[a-zA-Z$_][a-zA-Z$_0-9]*$/gm.test(key)))(key) ? bonus !== undefined ? bonus(key) : key : ofString(key);
 
 const ofString = (node: string): string => {
   const single = node.includes('\'');
@@ -60,6 +66,7 @@ interface FormattingOptions {
   hideUndefined: boolean;
   propogateOptions: boolean;
   keyFormat: (key: string) => string;
+  keyPredicate: (key: string) => boolean;
 }
 
 const format = (node: any, depth?: number, options?: Partial<FormattingOptions>): string => {
@@ -68,8 +75,10 @@ const format = (node: any, depth?: number, options?: Partial<FormattingOptions>)
     propogateOptions,
     hideUndefined,
     keyFormat,
+    keyPredicate,
   }: FormattingOptions = {
     keyFormat: (key) => key,
+    keyPredicate: /^[a-zA-Z$_][a-zA-Z$_0-9]*$/gm.test,
     stringStyle: 'string',
     propogateOptions: true,
     hideUndefined: false,
@@ -97,9 +106,9 @@ const format = (node: any, depth?: number, options?: Partial<FormattingOptions>)
     case 'number':
       return chalk.yellow(node);
     case 'object':
-      return (depth ?? -1) === 0 ? chalk.cyan('[Object]') : `{ ${Object.entries(node).map(([key, value]) => hideUndefined && value === undefined ? ofKey(key, keyFormat) : `${ofKey(key, keyFormat)}: ${format(value, depth === undefined ? -1 : depth - 1, propogateOptions ? options : undefined)}`).join(', ')} }`;
+      return (depth ?? -1) === 0 ? chalk.cyan('[Object]') : `{ ${Object.entries(node).map(([key, value]) => hideUndefined && value === undefined ? ofKey(key, keyFormat, keyPredicate) : `${ofKey(key, keyFormat, keyPredicate)}: ${format(value, depth === undefined ? -1 : depth - 1, propogateOptions ? options : undefined)}`).join(', ')} }`;
     case 'string':
-      return stringStyle === 'key' ? ofKey(node, keyFormat) : ofString(node);
+      return stringStyle === 'key' ? ofKey(node, keyFormat, keyPredicate) : ofString(node);
     case 'symbol':
       return chalk.green(node.toString());
     default:
@@ -178,15 +187,12 @@ const parseJSONLike = (jsonLike: string) => {
 
   let heap: any[] = [''];
 
-  //konsol.log(' >> heap: ', heap);
-  //konsol.log(' >> ptrs: ', pointers);
-  //konsol.log(' >> rslt: ', result);
   const chars = [...jsonLike.split(''), ','];
   for (let i = 0; i < chars.length; i++) {
     const char = chars[i];
     const rest = chars.slice(i + 1).join('');
-    //konsol.log(' >> ', format(char));
-    //konsol.log('   >> rest: ', format(rest));
+    konsol.log(' >> ', format(char));
+    konsol.log('   >> rest: ', format(rest));
     if (char === '[' || char === '{' || char === ']' || char === '}' || char === ',' || char === ':') {
       const pointer = pointers.slice(-1)[0];
       const bracket = stacket.slice(-1)[0];
@@ -209,7 +215,7 @@ const parseJSONLike = (jsonLike: string) => {
 
       if (heap[0].length > 0) {
         if (char === ':') {
-          const match = rest.match(/^[a-zA-Z$_][a-zA-Z0-9$_]*/m);
+          const match = rest.match(/^(?:...)[a-zA-Z$_][a-zA-Z0-9$_]*/m);
           if (match !== null) {
             heap.push(match[0]);
             i += match[0].length;
@@ -220,24 +226,32 @@ const parseJSONLike = (jsonLike: string) => {
       }
       heap = [''];
     } else {
-      const match = (char + rest).match(/^(?:"(?:[^\\"]|\\")*"|'(?:[^\\']|\\')*'|`(?:[^\\`]|\\`)*`)/m);
 
-      if (match !== null) {
+      const quoteMatch = (char + rest).match(/^(?:"(?:[^\\"]|\\")*"|'(?:[^\\']|\\')*'|`(?:[^\\`]|\\`)*`)/m);
+      if (quoteMatch !== null) {
         const old = heap.pop();
-        heap.push(old + match[0]);
-        i += match[0].length - 1;
-      } else if (!/\s/.test(char)) {
-        const old = heap.pop();
-        heap.push(old + char);
+        heap.push(old + quoteMatch[0]);
+        i += quoteMatch[0].length - 1;
+      } else {
+        const idMatch = (char + rest).match(/^(?:...)?[a-zA-Z$_][a-zA-Z0-9$_]*/m);
+        if (idMatch !== null) {
+          const old = heap.pop();
+          heap.push(old + idMatch[0]);
+          i += idMatch[0].length - 1;
+        }
       }
     }
-    //konsol.log('   >> heap: ', heap);
-    //konsol.log('   >> ptrs: ', pointers);
-    //konsol.log('   >> rslt: ', result);
+    konsol.log('   >> heap: ', heap);
+    konsol.log('   >> ptrs: ', pointers);
+    konsol.log('   >> rslt: ', result);
   }
   return result;
 };
-const b = (a: any, b: any, c: any, { 'k': l }: { 'k': any }) => null;
-const b2 = function b(a: any, b: any, c: any, { 'k': l }: { 'k': any }) { return null; };
-konsol.log(b);
-konsol.log(b2);
+
+const sum = (num: number, ...nums: number[]) => num + nums.reduce((i, num) => i + num);
+const sum2 = eval('(...nums) => nums.reduce((i, num) => i + num)');
+//const sum3 = eval('(...nums) => { return nums.reduce((i, num) => i + num); }');
+
+konsol.log(ofFunction(sum));
+konsol.log(ofFunction(sum2));
+konsol.log(ofFunctionCall(sum, [0, 1, 55, 208]));
