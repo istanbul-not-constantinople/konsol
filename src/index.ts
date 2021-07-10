@@ -250,18 +250,5 @@ const parseJSONLike = (jsonLike: string) => {
     // konsol.log('   >> rslt: ', result);
   }
 
-  konsol.log(result);
-
   return result;
 };
-
-const sum = (...nums: number[]) => nums.reduce((i, num) => i + num);
-const sum2 = eval('(...nums) => nums.reduce((i, num) => i + num)');
-//const sum3 = eval('(...nums) => { return nums.reduce((i, num) => i + num); }');
-
-//const ab = ;
-
-konsol.log(ofFunction(sum));
-konsol.log((a: number, b: number) => a - b);
-konsol.log(konsol.formatFunctionCall(sum, [0, 1, 55, 208]));
-konsol.log(konsol.formatFunctionCall((a: number, b: number) => a - b, [0, 1]));
