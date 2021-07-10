@@ -1,5 +1,5 @@
 {
-  "name": "konsol",
+  "name": "konsol-ts",
   "version": "1.0.0",
   "description": "does this count as boilerplate?",
   "main": "out/index.js",
