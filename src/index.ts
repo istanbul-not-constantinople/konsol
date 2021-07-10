@@ -131,6 +131,4 @@ const konsol: Konsol & Console = Object.assign(substitute, {
   Console: console.Console,
 });
 
-konsol.log('i have %s carrots in my %s', 19, { mouth: true, nose: false, legs: false })
-
 export default konsol;
