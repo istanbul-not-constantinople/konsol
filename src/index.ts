@@ -30,7 +30,6 @@ const ofFunction = (func: (...args: any[]) => any) => {
     .replace(/\1/gm, '/')
     .replace(/"(?:[^\\"]|\\")*"|'(?:[^\\']|\\')*'|`(?:[^\\`]|\\`)*`/gm, (m) => m.replace(/\)/gm, '\u0001'));
   regexified = regexified.slice(0, regexified.indexOf(')')).replace(/\1/gm, ')');
-  console.log(regexified.slice(bracket + 1));
   return styleFunction(func.name, format(parseJSONLike(regexified.slice(bracket + 1)), undefined, { hideUndefined: true, stringStyle: 'key', keyFormat: chalk.magentaBright.italic, keyPredicate: (key: string) => /^(?:...)?[a-zA-Z$_][a-zA-Z$_0-9]*$/gm.test(key) }).slice(1, -1), chalk.gray('...'));
 }
 
@@ -191,8 +190,8 @@ const parseJSONLike = (jsonLike: string) => {
   for (let i = 0; i < chars.length; i++) {
     const char = chars[i];
     const rest = chars.slice(i + 1).join('');
-    konsol.log(' >> ', format(char));
-    konsol.log('   >> rest: ', format(rest));
+    // konsol.log(' >> ', format(char));
+    // konsol.log('   >> rest: ', format(rest));
     if (char === '[' || char === '{' || char === ']' || char === '}' || char === ',' || char === ':') {
       const pointer = pointers.slice(-1)[0];
       const bracket = stacket.slice(-1)[0];
@@ -241,17 +240,16 @@ const parseJSONLike = (jsonLike: string) => {
         }
       }
     }
-    konsol.log('   >> heap: ', heap);
-    konsol.log('   >> ptrs: ', pointers);
-    konsol.log('   >> rslt: ', result);
+    // konsol.log('   >> heap: ', heap);
+    // konsol.log('   >> ptrs: ', pointers);
+    // konsol.log('   >> rslt: ', result);
   }
   return result;
 };
 
-const sum = (num: number, ...nums: number[]) => num + nums.reduce((i, num) => i + num);
+const sum = (...nums: number[]) => nums.reduce((i, num) => i + num);
 const sum2 = eval('(...nums) => nums.reduce((i, num) => i + num)');
 //const sum3 = eval('(...nums) => { return nums.reduce((i, num) => i + num); }');
 
 konsol.log(ofFunction(sum));
-konsol.log(ofFunction(sum2));
 konsol.log(ofFunctionCall(sum, [0, 1, 55, 208]));
