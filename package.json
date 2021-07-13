@@ -1,6 +1,6 @@
 {
   "name": "konsol-ts",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "does this count as boilerplate?",
   "main": "out/index.js",
   "types": "out/index.d.ts",
