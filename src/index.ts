@@ -71,6 +71,7 @@ const ofString = (node: string): string => {
 };
 
 interface FormattingOptions {
+  depth: number;
   stringStyle: 'key' | 'string';
   hideUndefined: boolean;
   propogateOptions: boolean;
@@ -80,6 +81,7 @@ interface FormattingOptions {
 
 const format = (node: any, depth?: number, options?: Partial<FormattingOptions>): string => {
   const {
+    depth: deepeningCapacity,
     stringStyle,
     propogateOptions,
     hideUndefined,
@@ -88,6 +90,7 @@ const format = (node: any, depth?: number, options?: Partial<FormattingOptions>)
   }: FormattingOptions = {
     keyFormat: (key) => key,
     keyPredicate: keyCheck,
+    depth: depth ?? -1,
     stringStyle: 'string',
     propogateOptions: true,
     hideUndefined: false,
@@ -102,7 +105,7 @@ const format = (node: any, depth?: number, options?: Partial<FormattingOptions>)
   }
 
   if (Array.isArray(node)) {
-    return (depth ?? -1) === 0 ? chalk.cyan('[Array]') : `[${node.map(element => hideUndefined && element === undefined ? ',' : format(element, depth === undefined ? -1 : depth - 1, propogateOptions ? options : undefined)).join(', ')}]`;
+    return (deepeningCapacity ?? -1) === 0 ? chalk.cyan('[Array]') : `[${node.map(element => hideUndefined && element === undefined ? ',' : format(element, deepeningCapacity === undefined ? -1 : deepeningCapacity - 1, propogateOptions ? options : undefined)).join(', ')}]`;
   }
 
   switch (typeof node) {
@@ -115,7 +118,7 @@ const format = (node: any, depth?: number, options?: Partial<FormattingOptions>)
     case 'number':
       return chalk.yellow(node);
     case 'object':
-      return (depth ?? -1) === 0 ? chalk.cyan('[Object]') : `{ ${Object.entries(node).map(([key, value]) => hideUndefined && value === undefined ? ofKey(key, keyFormat, keyPredicate) : `${ofKey(key, keyFormat, keyPredicate)}: ${format(value, depth === undefined ? -1 : depth - 1, propogateOptions ? options : undefined)}`).join(', ')} }`;
+      return (deepeningCapacity ?? -1) === 0 ? chalk.cyan('[Object]') : `{ ${Object.entries(node).map(([key, value]) => hideUndefined && value === undefined ? ofKey(key, keyFormat, keyPredicate) : `${ofKey(key, keyFormat, keyPredicate)}: ${format(value, deepeningCapacity === undefined ? -1 : deepeningCapacity - 1, propogateOptions ? options : undefined)}`).join(', ')} }`;
     case 'string':
       return stringStyle === 'key' ? ofKey(node, keyFormat, keyPredicate) : ofString(node);
     case 'symbol':
