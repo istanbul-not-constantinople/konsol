@@ -80,7 +80,7 @@ interface FormattingOptions {
 }
 
 const format = (node: any, depth?: number, options?: Partial<FormattingOptions>): string => {
-  const {
+  let {
     depth: deepeningCapacity,
     stringStyle,
     propogateOptions,
@@ -90,12 +90,16 @@ const format = (node: any, depth?: number, options?: Partial<FormattingOptions>)
   }: FormattingOptions = {
     keyFormat: (key) => key,
     keyPredicate: keyCheck,
-    depth: depth ?? -1,
     stringStyle: 'string',
     propogateOptions: true,
     hideUndefined: false,
     ...options,
+    depth: depth ?? -1,
   };
+  if(deepeningCapacity === -1) {
+    deepeningCapacity = options?.depth ?? -1;
+  }
+
   if (node === undefined) {
     return hideUndefined ? '' : chalk.gray('undefined');
   }
