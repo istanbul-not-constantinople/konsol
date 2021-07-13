@@ -5,13 +5,13 @@ const escapeString = (node: string, quote: string): string => {
   return `${quote}${node.replace(new RegExp(quote, 'gm'), `\\${quote}`)}${quote}`;
 };
 const unescapeString = (node: string) => {
-  if (/^'(?:[^\\']|\\')*'$/.test(node)) {
+  if (/^'(?:[^\\']|\\')*'$/m.test(node)) {
     return node.slice(1, -1).replace(/\\'/gm, '\'');
   }
-  if (/^"(?:[^\\"]|\\")*"$/.test(node)) {
+  if (/^"(?:[^\\"]|\\")*"$/m.test(node)) {
     return node.slice(1, -1).replace(/\\"/gm, '"');
   }
-  if (/^`(?:[^\\`]|\\`)*`$/.test(node)) {
+  if (/^`(?:[^\\`]|\\`)*`$/m.test(node)) {
     return node.slice(1, -1).replace(/\\`/gm, '`');
   }
   return node;
@@ -19,7 +19,7 @@ const unescapeString = (node: string) => {
 
 const styleFunction = (name: string, args: string, result: string) => `${chalk.cyan(name || chalk.gray('[anonymous] '))}(${args}) ${chalk.gray('=>')} ${result}`;
 
-const ofFunction = (func: (...args: any[]) => any) => {
+const ofFunction = (func: (...args: any[]) => any, options?: Partial<FunctionOptions<any>>) => {
   const rawContent = func.toString().trim();
   const content = (rawContent.startsWith('function') ? rawContent.slice(8).trim() : rawContent.replace(/^([a-zA-Z$_][a-zA-Z0-9$_]*)\s*/m, `($1) `));
   const bracket = content.indexOf('(');
@@ -30,16 +30,26 @@ const ofFunction = (func: (...args: any[]) => any) => {
     .replace(/\1/gm, '/')
     .replace(/"(?:[^\\"]|\\")*"|'(?:[^\\']|\\')*'|`(?:[^\\`]|\\`)*`/gm, (m) => m.replace(/\)/gm, '\u0001'));
   regexified = regexified.slice(0, regexified.indexOf(')')).replace(/\1/gm, ')');
-  return styleFunction(func.name, format(parseJSONLike(regexified.slice(bracket + 1)), undefined, { hideUndefined: true, stringStyle: 'key', keyFormat: (key: string) => key.startsWith('...') ? `${chalk.gray('...')}${chalk.magentaBright.italic(key.slice(3))}` : chalk.magentaBright.italic(key), keyPredicate: (key: string) => /^(?:...)?[a-zA-Z$_][a-zA-Z$_0-9]*$/gm.test(key) }).slice(1, -1), chalk.gray('...'));
-}
-
-const ofFunctionCall = <T extends (...args: U) => V, U extends any[], V>(func: T, args: U, run?: boolean, cachedResult?: V) => {
-  const content = func.toString().trim().replace(/((?:function)?)\s+([a-zA-Z$_][a-zA-Z0-9$_]*)\s*/gm, '$1 $2');
-  const bracket = content.indexOf('(');
-  return styleFunction((content.startsWith('function') ? content.slice(9, bracket) : '') || func.name, format(args).slice(1, -1), (run ?? true) ? format(cachedResult ?? func(...args)) : chalk.gray('...'));
+  return styleFunction(options?.name ?? func.name, format(parseJSONLike(regexified.slice(bracket + 1)), undefined, { hideUndefined: true, stringStyle: 'key', keyFormat: (key: string) => key.startsWith('...') ? `${chalk.gray('...')}${chalk.magentaBright.italic(key.slice(3))}` : chalk.magentaBright.italic(key), keyPredicate: (key: string) => /^(?:...)?[a-zA-Z$_][a-zA-Z$_0-9]*$/gm.test(key) }).slice(1, -1), options?.cachedResult ? format(options.cachedResult) : chalk.gray('...'));
 };
 
-const ofKey = (key: string, bonus?: (key: string) => string, isKey?: (key: string) => boolean): string => (isKey ?? ((key: string) => /^[a-zA-Z$_][a-zA-Z$_0-9]*$/gm.test(key)))(key) ? bonus !== undefined ? bonus(key) : key : ofString(key);
+interface FunctionOptions<T> {
+  cachedResult: T;
+  name: string;
+}
+
+interface FunctionCallOptions<T> extends FunctionOptions<T> {
+  run: boolean;
+}
+
+const ofFunctionCall = <T extends (...args: U) => V, U extends any[], V>(func: T, args: U, options?: Partial<FunctionCallOptions<V>>) => {
+  const content = func.toString().trim().replace(/((?:function)?)\s+([a-zA-Z$_][a-zA-Z0-9$_]*)\s*/gm, '$1 $2');
+  const bracket = content.indexOf('(');
+  return styleFunction(options?.name ?? ((content.startsWith('function') ? content.slice(9, bracket) : '') || func.name), format(args).slice(1, -1), options?.cachedResult !== undefined ? format(options.cachedResult) : (options?.run ?? true) ? format(func(...args)) : chalk.gray('...'));
+};
+
+const keyCheck = (key: string) => /^[a-zA-Z$_][a-zA-Z$_0-9]*$/gm.test(key ?? '');
+const ofKey = (key: string, bonus?: (key: string) => string, isKey?: (key: string) => boolean): string => key !== undefined ? (isKey ?? keyCheck)(key) ? bonus !== undefined ? bonus(key) : key : ofString(key) : format(key);
 
 const ofString = (node: string): string => {
   const single = node.includes('\'');
@@ -77,7 +87,7 @@ const format = (node: any, depth?: number, options?: Partial<FormattingOptions>)
     keyPredicate,
   }: FormattingOptions = {
     keyFormat: (key) => key,
-    keyPredicate: /^[a-zA-Z$_][a-zA-Z$_0-9]*$/gm.test,
+    keyPredicate: keyCheck,
     stringStyle: 'string',
     propogateOptions: true,
     hideUndefined: false,
@@ -131,12 +141,21 @@ type ConditionalProperty<T extends keyof any, U extends Record<keyof any, any>, 
 
 //const b: ConditionalProperty<keyof Konsol.Events, Konsol.Events, (formatted: string) => void> = null as any;
 interface Konsol {
-  formatFunctionCall: <T extends (...args: U) => V, U extends any[], V>(func: T, args: U, run?: boolean, cachedResult?: V) => string;
+  format: (...parts: any[]) => string,
+  formatWithOptions: (options: Partial<FormattingOptions>, ...parts: any[]) => string,
+  formatFunctionCall: typeof ofFunctionCall;
+  strip: (input: string) => string,
+  substitute: typeof substitute,
   (message?: any, ...optionalParams: any[]): string;
 }
 
 const konsol: Konsol & { hooks: Konsol.Emitter } & Console = Object.assign(substitute, { hooks: new Konsol.Emitter() }, {
+  format: (...parts: any[]) => parts.map(part => format(part)).join(''),
+  formatWithOptions: (options: Partial<FormattingOptions>, ...parts: any[]) => parts.map(part => format(part, -1, options)).join(''),
   formatFunctionCall: ofFunctionCall,
+  substitute,
+  strip: (input: string) => input.replace(/[\u001B\u009B][[\]()#;?]*(?:(?:(?:[a-zA-Z\d]*(?:;[-a-zA-Z\d\/#&.:=?%@~_]*)*)?\u0007)|(?:(?:\d{1,4}(?:;\d{0,4})*)?[\dA-PR-TZcf-ntqry=><~]))/g, ''),
+
   assert: (value: any, message?: string, ...optionalParams: any[]) => value === false ? konsol.log('Assertion failed: ', message, ...optionalParams) : void 0,
   memory: console.memory,
   clear: console.clear,
@@ -180,7 +199,6 @@ const konsol: Konsol & { hooks: Konsol.Emitter } & Console = Object.assign(subst
   warn: (message?: any, ...extra: any[]) => konsol.log(message, ...extra),
   Console: console.Console,
 });
-
 
 export default konsol;
 
